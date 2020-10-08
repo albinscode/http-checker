@@ -1,13 +1,7 @@
-const notifier = require('node-notifier')
 const config = require('../config.json')
 const commons = require('./commons.js')
 
-const axios = require('axios')
-const request = axios.create({
-  withCredentials: true
-})
-
-request.defaults.headers.common['User-Agent'] =  "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:80.0) Gecko/20100101 Firefox/80.0"
+const request = commons.getAxiosRequest()
 
 const initUrl =  "https://openpaas.linagora.com/api/login"
 const tokenUrl =  "https://openpaas.linagora.com/api/jwt/generate"
@@ -72,34 +66,6 @@ const requestMessageContents =
 let messageIds = []
 // const requestMessageContents =
 
-// the cookie retrieved during auth
-let cookie = ''
-// the final bearer token to access to the mail api
-let bearer = ''
-
-// Add a request interceptor to add cookies and bearer token
-request.interceptors.request.use((config) => {
-    // Do something before request is sent
-    if (cookie != '') {
-        console.log('adding cookie')
-        config['headers']['Cookie'] = cookie
-    }
-    if (bearer != '') {
-        config['headers']['Authorization'] = 'Bearer ' + bearer
-    }
-    return config
-  }, (error) => {
-    return Promise.reject(error)
-  });
-
-function retrieveCookie(res)  {
-    console.log(res.headers['set-cookie'])
-    let full = res.headers['set-cookie'][0];
-    cookie = full.substring(0, full.indexOf(';'));
-    console.log(`Sending cookie ${cookie}`)
-    return cookie;
-}
-
 function fetchMails() {
     // we log to the application using html form
     console.log('Login request')
@@ -115,14 +81,13 @@ function fetchMails() {
     // we then ask for a token to the api
     .then (res => {
         console.log('Token request')
-        retrieveCookie(res);
+        commons.retrieveCookie(res);
         return request.post(tokenUrl)
     })
     .then (res => {
         console.log("Mail request")
         // we have the bearer token in data
-        bearer = res.data
-        cookie = ''
+        commons.setBearerToken(res.data)
         return request.post(mailUrl, requestMessageIds)
     })
     .then (res => {
@@ -147,28 +112,12 @@ function fetchMails() {
         commons.updateCache('openpaas-mails.cache', JSON.stringify(messageBodies), () => {
             // not already in cache we notify
             messages.forEach(message => {
-               console.log(`Unread message from "${message.from.name}" => ${message.preview}`)
-               notifier.notify({
-                        title: message.from.name,
-                        message: message.preview,
-                        timeout: 30,
-                        open: initUrl,
-                        wait: true,
-                })
-               notifier.on('click', () => {
-               })
+               commons.sendNotification(message.from.name, message.preview, 'test.com')
             })
         });
     })
     .catch (error => {
-        console.log("Error request")
-        if (error.request) {
-            console.log('Here are the sent headers of the request:')
-            console.log(error.request._header)
-        }
-        else {
-            console.log(error)
-        }
+        commons.debugRequest(error)
     })
 }
 
