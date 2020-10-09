@@ -1,7 +1,8 @@
 const mails = require('./src/openpaas-mails.js')
 const twake = require('./src/twake.js')
+const commons = require('./src/commons.js')
 
-mails.fetchMails();
+commons.startNotificationsService()
 twake.fetch();
 setInterval( () => {
     // mails.fetchMails();

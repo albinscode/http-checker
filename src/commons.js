@@ -1,11 +1,15 @@
 const fs = require('fs')
-const notifier = require('node-notifier')
 const axios = require('axios')
+const dbus = require('dbus-native');
 
 
 const request = axios.create({
   withCredentials: true
 })
+
+
+let notificationService = null
+let notificationsSender = null
 
 const cacheDir = '.cache'
 
@@ -35,11 +39,11 @@ function updateCache(cacheFile, content, done) {
     const path = cacheDir + '/' + cacheFile
     fs.mkdir(cacheDir, () => {
         fs.readFile(path, 'utf8', function (err, oldContent) {
-            if (oldContent != content) {
+            // if (oldContent != content) {
                 fs.writeFile(path, content, () => {
                     done()
                 })
-            }
+            // }
         });
     });
 }
@@ -98,13 +102,44 @@ function setBearerToken(bearerToken) {
 }
 
 function sendNotification(author, message, url) {
-   console.log(`Unread message from "${author}" => ${message}`)
-   notifier.notify({
-            title: author,
-            message: message,
-            timeout: 30,
-            open: url,
-            wait: true,
+    console.log(`Unread message from "${author}" => ${message}`)
+
+    let extras = [
+        'test of extras', [ 's', 'this is my string']
+
+    ]
+
+    // dbus call
+    notificationsSender.Notify('', 0, '', author, message, [], [extras],  30 * 1000, (err, id) => {
+        console.log('notif envoyée')
+        console.log(id)
+        console.log(err)
+    })
+}
+
+/**
+ * I tried to use node-notifier package but it is just a
+ * wrapping of send-notify (in case of linux).
+ * So we could not use callbacks or else...
+ * See https://specifications.freedesktop.org/notification-spec/latest/ar01s09.html for doc
+ * about dbus.
+ */
+function startNotificationsService() {
+
+    notificationService = dbus.sessionBus()
+
+    notificationService.getService('org.freedesktop.Notifications').getInterface(
+        '/org/freedesktop/Notifications',
+        'org.freedesktop.Notifications', (err, notifications) => {
+
+        notificationsSender = notifications
+        // dbus signals are EventEmitter events
+        notifications.on('ActionInvoked', () => {
+            console.log('ActionInvoked', arguments)
+        })
+        notifications.on('NotificationClosed', (id, closeCode) => {
+            if (closeCode === 2) console.log('NotificationClosed by user')
+        })
     })
 }
 
@@ -114,3 +149,4 @@ module.exports.getAxiosRequest = getAxiosRequest
 module.exports.debugRequest = debugRequest
 module.exports.sendNotification = sendNotification
 module.exports.setBearerToken = setBearerToken
+module.exports.startNotificationsService = startNotificationsService

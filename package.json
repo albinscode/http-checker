@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "axios": "0.20.0",
+    "dbus-native": "^0.4.0",
     "node-notifier": "8.0.0"
   }
 }
