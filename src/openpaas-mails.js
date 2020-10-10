@@ -1,5 +1,6 @@
 const config = require('../config.json')
 const commons = require('./commons.js')
+commons.init('openpaas')
 
 const request = commons.getAxiosRequest()
 
@@ -66,25 +67,36 @@ const requestMessageContents =
 let messageIds = []
 // const requestMessageContents =
 
-function fetchMails() {
+// authenticate to openpaas, cookie and beare token needed
+function auth() {
+
     // we log to the application using html form
-    request.post(initUrl, {
-        "password": config.password,
-        "recaptcha": {
-            "data": null,
-            "needed": false
-        },
-        "rememberme": false,
-        "username": config.username
-    })
-    // we then ask for a token to the api
+    // then we generate token
+    return commons.auth( () => request.post(initUrl, {
+            "password": config.password,
+            "recaptcha": {
+                "data": null,
+                "needed": false
+            },
+            "rememberme": false,
+            "username": config.username
+        })
+        .then (res => {
+            commons.retrieveCookie(res)
+            return request.post(tokenUrl)
+        })
+        .then (res => {
+            // we have the bearer token in data
+            commons.setBearerToken(res.data)
+            return new Promise((resolve, reject) => resolve())
+        })
+    )
+
+}
+
+function fetchMails() {
+    auth()
     .then (res => {
-        commons.retrieveCookie(res);
-        return request.post(tokenUrl)
-    })
-    .then (res => {
-        // we have the bearer token in data
-        commons.setBearerToken(res.data)
         return request.post(mailUrl, requestMessageIds)
     })
     .then (res => {

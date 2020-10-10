@@ -1,9 +1,19 @@
 const mails = require('./src/openpaas-mails.js')
 const twake = require('./src/twake.js')
+const commons = require('./src/commons.js')
+const config = require('./config.json')
 
-// mails.fetchMails();
+let log4js = require("log4js")
+let logger = log4js.getLogger()
+logger.level = config.level
+
+logger.info('Launching http checker')
+
+// commons.sendNotification('test', '<b>test albo</b> <a href="test.com">atessdfsdf</a>')
+
+mails.fetchMails()
 twake.fetch();
 setInterval( () => {
-    // mails.fetchMails();
+    mails.fetchMails();
     twake.fetch();
-}, 10 * 1000)
+}, config.timeout * 1000)

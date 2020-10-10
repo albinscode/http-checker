@@ -1,5 +1,7 @@
 const config = require('../config.json')
 const commons = require('./commons.js')
+commons.init('twake')
+const Promise = require('promise')
 
 const request = commons.getAxiosRequest()
 
@@ -18,14 +20,21 @@ const requestMentionOfUser = {
     ]
 }
 
-function fetch() {
+// authenticate to twake, only cookie needed
+function auth() {
 
-    request.post(initUrl, {
+    // we call the generic auth with specific twake callback
+    return commons.auth( () => request.post(initUrl, {
         "_password": config.password,
         "_rememberme": false,
         "_username": config.username,
         "device": {}
-    })
+    }))
+}
+
+function fetch() {
+
+    auth()
     // we then ask for a token to the api
     .then (res => {
         commons.retrieveCookie(res)

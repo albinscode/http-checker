@@ -1,4 +1,5 @@
 {
     "username": "myusername",
-    "password": "mypassword"
+    "password": "mypassword",
+    "timeout": "30"
 }

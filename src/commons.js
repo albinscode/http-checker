@@ -1,7 +1,14 @@
+/**
+ * This module is NOT shared when required with commonjs.
+ * It is like a new instance of a class.
+ * It allows to save all variables for a given context:
+ * one for twake, one for openpaas, etc...
+ */
 const fs = require('fs')
 const notifier = require('node-notifier')
 const axios = require('axios')
-
+const log4js = require("log4js")
+const logger = log4js.getLogger()
 
 const request = axios.create({
   withCredentials: true
@@ -9,10 +16,16 @@ const request = axios.create({
 
 const cacheDir = '.cache'
 
+let connector = ''
+
 // the cookie retrieved during auth
 let cookie = ''
 // the final bearer token to access to the mail api
 let bearer = ''
+
+function init(conn) {
+    connector = conn
+}
 
 /*
  * Return the axios request properly configured with interceptors.
@@ -22,6 +35,21 @@ function getAxiosRequest() {
     request.defaults.headers.common['User-Agent'] =  "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:80.0) Gecko/20100101 Firefox/80.0"
     configureRequestInterceptors();
     return request;
+}
+
+// return a promise with cookie if already exists
+// or will log to app if not existing
+// the callback shall return a promise to be compatible!
+function auth(callbackIfNotAuthenticated) {
+
+    // reject never happens
+    if (cookie) {
+        logger.debug(`cookie is ${cookie} for ${connector}`)
+        return new Promise((resolve, reject) => resolve('cookie already provided'))
+    }
+    logger.debug(`there is no cookie we have to fetch it ${cookie} for ${connector}`)
+
+    return callbackIfNotAuthenticated()
 }
 
 /**
@@ -41,7 +69,7 @@ function updateCache(cacheFile, content, done) {
                 })
             }
             else {
-                console.log('No new update')
+                logger.info('No new update')
             }
         });
     });
@@ -52,7 +80,10 @@ function updateCache(cacheFile, content, done) {
  */
 function retrieveCookie(res)  {
 
-    if (!res.headers['set-cookie']) throw new Error('no cookie received')
+    // no need to fetch a new cookie
+    if (cookie) return cookie;
+
+    if (!res.headers['set-cookie']) throw new Error(`no cookie received for ${connector}`)
 
     let full = res.headers['set-cookie'][0];
     // we keep cookie internally
@@ -65,7 +96,7 @@ function configureRequestInterceptors() {
     request.interceptors.request.use((config) => {
         // Do something before request is sent
         if (cookie != '') {
-            // console.log('adding cookie')
+            logger.debug(`adding fresh cookie for ${connector}`)
             config['headers']['Cookie'] = cookie
         }
         if (bearer != '') {
@@ -81,13 +112,12 @@ function configureRequestInterceptors() {
  * An utility to debug request response error
  */
 function debugRequest(error) {
-    console.log("Error request")
+    logger.error("Error on request")
     if (error.request) {
-        console.log('Here are the sent headers of the request:')
-        console.log(error.request._header)
+        logger.error(`Here are the sent headers of the request: ${error.request._header}`)
     }
     else {
-        console.log(error)
+        logger.error(error)
     }
 }
 
@@ -96,6 +126,10 @@ function debugRequest(error) {
  */
 function setBearerToken(bearerToken) {
     bearer = bearerToken
+}
+
+function getCookie() {
+    return cookie
 }
 
 function sendNotification(author, message, url) {
@@ -109,9 +143,13 @@ function sendNotification(author, message, url) {
     })
 }
 
-module.exports.updateCache = updateCache
-module.exports.retrieveCookie = retrieveCookie
-module.exports.getAxiosRequest = getAxiosRequest
-module.exports.debugRequest = debugRequest
-module.exports.sendNotification = sendNotification
-module.exports.setBearerToken = setBearerToken
+exports.instanceinit = init
+exports.updateCache = updateCache
+exports.retrieveCookie = retrieveCookie
+exports.getAxiosRequest = getAxiosRequest
+exports.debugRequest = debugRequest
+exports.sendNotification = sendNotification
+exports.setBearerToken = setBearerToken
+exports.auth = auth
+
+console.log(exports)
