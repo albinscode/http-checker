@@ -40,6 +40,9 @@ function updateCache(cacheFile, content, done) {
                     done()
                 })
             }
+            else {
+                console.log('No new update')
+            }
         });
     });
 }
@@ -51,11 +54,9 @@ function retrieveCookie(res)  {
 
     if (!res.headers['set-cookie']) throw new Error('no cookie received')
 
-    console.log(res.headers['set-cookie'])
     let full = res.headers['set-cookie'][0];
     // we keep cookie internally
     cookie = full.substring(0, full.indexOf(';'));
-    console.log(`cookie ${cookie} retrieved`)
     return cookie;
 }
 
@@ -64,7 +65,7 @@ function configureRequestInterceptors() {
     request.interceptors.request.use((config) => {
         // Do something before request is sent
         if (cookie != '') {
-            console.log('adding cookie')
+            // console.log('adding cookie')
             config['headers']['Cookie'] = cookie
         }
         if (bearer != '') {
@@ -98,7 +99,7 @@ function setBearerToken(bearerToken) {
 }
 
 function sendNotification(author, message, url) {
-   console.log(`Unread message from "${author}" => ${message}`)
+   console.log(`Message from "${author}" => ${message}`)
    notifier.notify({
             title: author,
             message: message,

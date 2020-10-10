@@ -32,7 +32,6 @@ function fetch() {
         return request.post(advancedSearchUrl, requestMentionOfUser)
     })
     .then (res => {
-        res.data.data.results.map(message => console.log(message.message))
         let messages = res.data.data.results
             // by desc date
             .sort((m1, m2) => -m1.message.creation_date.toString().localeCompare(m2.message.creation_date.toString()))
@@ -40,7 +39,7 @@ function fetch() {
             .map(message => message.message.content.original_str);
 
         // we check if already in cache
-        commons.updateCache('openpaas-mails.cache', JSON.stringify(messages), () => {
+        commons.updateCache('twake.cache', JSON.stringify(messages), () => {
             // not already in cache we notify
             messages.forEach(message => {
                commons.sendNotification('twake', message, 'test.com')

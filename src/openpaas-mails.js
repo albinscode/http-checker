@@ -68,7 +68,6 @@ let messageIds = []
 
 function fetchMails() {
     // we log to the application using html form
-    console.log('Login request')
     request.post(initUrl, {
         "password": config.password,
         "recaptcha": {
@@ -80,12 +79,10 @@ function fetchMails() {
     })
     // we then ask for a token to the api
     .then (res => {
-        console.log('Token request')
         commons.retrieveCookie(res);
         return request.post(tokenUrl)
     })
     .then (res => {
-        console.log("Mail request")
         // we have the bearer token in data
         commons.setBearerToken(res.data)
         return request.post(mailUrl, requestMessageIds)
@@ -93,13 +90,11 @@ function fetchMails() {
     .then (res => {
         // gathering messages ids
         let messageIds = res.data[0][1]['messageIds']
-        // messageIds.map(id => console.log(`Message id "${id}"`))
         requestMessageContents[0][1]['ids'] = messageIds
         return request.post(mailUrl, requestMessageContents)
     })
     .then (res => {
         // gathering message contents
-        // console.log(res)
         let messages = res.data[0][1]['list']
             // we keep only unread messages
             .filter(message => message.isUnread)
