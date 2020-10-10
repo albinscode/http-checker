@@ -18,10 +18,10 @@ const fetchAll = () => {
     mails.fetch()
     twake.fetch()
     twake.commonsRequest.getCacheContent( (err, content) =>
-        console.log(formatTable(JSON.parse(content)))
+        formatTable(JSON.parse(content), 'Twake last notifs')
     )
     mails.commonsRequest.getCacheContent( (err, content) =>
-        console.log(formatTable(JSON.parse(content)))
+        formatTable(JSON.parse(content), 'OpenPaas last unread mails')
     )
 }
 

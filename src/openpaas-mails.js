@@ -21,7 +21,7 @@ const requestMessageIds =
             "fetchMessages": false,
             "filter": {
                 "inMailboxes": [
-                    "045a5ba0-eec5-11ea-8665-3109e4489b2e"
+                    `${config.openpaasId}`
                 ],
                 "text": null
             },
@@ -126,7 +126,7 @@ function fetch() {
         commonsRequest.updateCache(JSON.stringify(messageBodies), () => {
             // not already in cache we notify
             messages.forEach(message => {
-               sendNotification(message.from.name, message.preview, 'test.com')
+               sendNotification(message.from.name, message.preview, '')
             })
         });
     })

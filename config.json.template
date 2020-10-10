@@ -2,4 +2,7 @@
     "username": "myusername",
     "password": "mypassword",
     "timeout": "30"
+    "level": "info",
+    "twakeId": "392723a6-e612-11ea-aa6a-0242ac120004",
+    "openpaasId": "045a5ba0-eec5-11ea-8665-3109e4489b2e"
 }

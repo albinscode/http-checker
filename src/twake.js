@@ -10,7 +10,9 @@ const request = commonsRequest.getAxiosRequest()
 const sendNotification = commons.sendNotification
 
 const initUrl =  "https://api.twake.app/ajax/users/login"
+// no more used
 const advancedSearchUrl =  "https://api.twake.app/ajax/globalsearch/advancedbloc"
+const lastNotificationsUrl =  "https://api.twake.app/ajax/core/collections/init"
 
 const requestMentionOfUser = {
     "group_id": "56393af2-e5fe-11e9-b894-0242ac120004",
@@ -21,6 +23,34 @@ const requestMentionOfUser = {
     },
     "words": [
         ""
+    ]
+}
+
+const requestLastNotifications = {
+    "multiple": [
+        {
+            "_grouped": true,
+            "collection_id": `notifications/${config.twakeId}`,
+            "options": {
+                "get_options": {},
+                "type": "notifications"
+            }
+        },
+        {
+            "_grouped": true,
+            "collection_id": `updates/${config.twakeId}`,
+            "options": {
+                "type": "updates"
+            }
+        },
+        {
+            "_grouped": true,
+            "collection_id": `channels/direct_messages/${config.twakeId}`,
+            "options": {
+                "get_options": {},
+                "type": "channels/direct_messages"
+            }
+        }
     ]
 }
 
@@ -36,37 +66,55 @@ function auth() {
     }))
 }
 
+// no more used but work done;)
+function manageMentionsOfUser() {
+    return res.data.data.results
+        .slice(0, 5)
+        // by desc date
+        .sort((m1, m2) => -m1.message.creation_date.toString().localeCompare(m2.message.creation_date.toString()))
+        // we keep only message
+        .reduce( (acc, message) => {
+
+            var location = message.workspace ? message.workspace.name + '/' : '';
+            location += message.channel ? message.channel.name : ''
+            return acc.concat({
+                author: `${message.message.sender} ${location}`,
+                message: message.message.content.original_str
+            })
+        }
+        , [])
+}
+
+function manageNotifications(res) {
+    return res.data.data[0].data.get
+        .slice(0, 10)
+        // by desc date
+        .sort((m1, m2) => -m1.date.toString().localeCompare(m2.date.toString()))
+        // we keep only message
+        .reduce( (acc, message) =>
+            acc.concat({
+                author: message.title,
+                message: message.text
+            })
+        , [])
+}
+
 function fetch() {
 
     auth()
     // we then ask for a token to the api
     .then (res => {
         commonsRequest.retrieveCookie(res)
-        return request.post(advancedSearchUrl, requestMentionOfUser)
+        return request.post(lastNotificationsUrl, requestLastNotifications)
     })
     .then (res => {
-        let messages = res.data.data.results
-            .slice(0, 5)
-            // by desc date
-            .sort((m1, m2) => -m1.message.creation_date.toString().localeCompare(m2.message.creation_date.toString()))
-            // we keep only message
-            .reduce( (acc, message) => {
-
-                var location = message.workspace ? message.workspace.name + '/' : '';
-                location += message.channel ? message.channel.name : ''
-                return acc.concat({
-                    author: `${message.message.sender} ${location}`,
-                    message: message.message.content.original_str
-                })
-            }
-            , [])
-
+        let messages = manageNotifications(res)
 
         // we check if already in cache
         commonsRequest.updateCache(JSON.stringify(messages), () => {
             // not already in cache we notify
             messages.forEach(message => {
-               sendNotification(message.author, message.message, 'test.com')
+               sendNotification(message.author, message.message, '')
             })
         });
     })
