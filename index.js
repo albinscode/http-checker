@@ -11,9 +11,12 @@ logger.info('Launching http checker')
 
 // commons.sendNotification('test', '<b>test albo</b> <a href="test.com">atessdfsdf</a>')
 
-mails.fetchMails()
-twake.fetch();
+const fetchAll = () => {
+    mails.fetch()
+    twake.fetch()
+}
+
+fetchAll()
 setInterval( () => {
-    mails.fetchMails();
-    twake.fetch();
+    fetchAll()
 }, config.timeout * 1000)

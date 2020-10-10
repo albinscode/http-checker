@@ -1,9 +1,14 @@
 const config = require('../config.json')
 const commons = require('./commons.js')
-commons.init('twake')
+const Request = commons.Request
 const Promise = require('promise')
 
-const request = commons.getAxiosRequest()
+const commonsRequest = new commons.Request("twake")
+
+// some shortcuts
+const request = commonsRequest.getAxiosRequest()
+const updateCache = commons.updateCache
+const sendNotification = commons.sendNotification
 
 const initUrl =  "https://api.twake.app/ajax/users/login"
 const advancedSearchUrl =  "https://api.twake.app/ajax/globalsearch/advancedbloc"
@@ -24,7 +29,7 @@ const requestMentionOfUser = {
 function auth() {
 
     // we call the generic auth with specific twake callback
-    return commons.auth( () => request.post(initUrl, {
+    return commonsRequest.auth( () => request.post(initUrl, {
         "_password": config.password,
         "_rememberme": false,
         "_username": config.username,
@@ -37,7 +42,7 @@ function fetch() {
     auth()
     // we then ask for a token to the api
     .then (res => {
-        commons.retrieveCookie(res)
+        commonsRequest.retrieveCookie(res)
         return request.post(advancedSearchUrl, requestMentionOfUser)
     })
     .then (res => {
@@ -48,17 +53,17 @@ function fetch() {
             .map(message => message.message.content.original_str);
 
         // we check if already in cache
-        commons.updateCache('twake.cache', JSON.stringify(messages), () => {
+        updateCache('twake.cache', JSON.stringify(messages), () => {
             // not already in cache we notify
             messages.forEach(message => {
-               commons.sendNotification('twake', message, 'test.com')
+               sendNotification('twake', message, 'test.com')
             })
         });
 
 
     })
     .catch (error => {
-        commons.debugRequest(error)
+        commonsRequest.debugRequest(error)
     })
 }
 

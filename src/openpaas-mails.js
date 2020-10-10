@@ -1,8 +1,13 @@
 const config = require('../config.json')
 const commons = require('./commons.js')
-commons.init('openpaas')
+const Request = commons.Request
 
-const request = commons.getAxiosRequest()
+const commonsRequest = new commons.Request("openpaas")
+
+// some shortcuts
+const request = commonsRequest.getAxiosRequest()
+const updateCache = commons.updateCache
+const sendNotification = commons.sendNotification
 
 const initUrl =  "https://openpaas.linagora.com/api/login"
 const tokenUrl =  "https://openpaas.linagora.com/api/jwt/generate"
@@ -72,7 +77,7 @@ function auth() {
 
     // we log to the application using html form
     // then we generate token
-    return commons.auth( () => request.post(initUrl, {
+    return commonsRequest.auth( () => request.post(initUrl, {
             "password": config.password,
             "recaptcha": {
                 "data": null,
@@ -82,19 +87,19 @@ function auth() {
             "username": config.username
         })
         .then (res => {
-            commons.retrieveCookie(res)
+            commonsRequest.retrieveCookie(res)
             return request.post(tokenUrl)
         })
         .then (res => {
             // we have the bearer token in data
-            commons.setBearerToken(res.data)
+            commonsRequest.setBearerToken(res.data)
             return new Promise((resolve, reject) => resolve())
         })
     )
 
 }
 
-function fetchMails() {
+function fetch() {
     auth()
     .then (res => {
         return request.post(mailUrl, requestMessageIds)
@@ -116,19 +121,19 @@ function fetchMails() {
         let messageBodies = messages.map((message) => message.preview)
 
         // we check if already in cache
-        commons.updateCache('openpaas-mails.cache', JSON.stringify(messageBodies), () => {
+        updateCache('openpaas-mails.cache', JSON.stringify(messageBodies), () => {
             // not already in cache we notify
             messages.forEach(message => {
-               commons.sendNotification(message.from.name, message.preview, 'test.com')
+               sendNotification(message.from.name, message.preview, 'test.com')
             })
         });
     })
     .catch (error => {
-        commons.debugRequest(error)
+        commonsRequest(error)
     })
 }
 
-module.exports.fetchMails = fetchMails;
+module.exports.fetch = fetch;
 
 
 

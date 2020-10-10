@@ -1,8 +1,7 @@
 /**
- * This module is NOT shared when required with commonjs.
- * It is like a new instance of a class.
- * It allows to save all variables for a given context:
- * one for twake, one for openpaas, etc...
+ * Some utilities all in one.
+ * I don't wan't to use ES6 class because I wan't
+ * to use as much function as possible and avoid this operator ;)
  */
 const fs = require('fs')
 const notifier = require('node-notifier')
@@ -10,46 +9,117 @@ const axios = require('axios')
 const log4js = require("log4js")
 const logger = log4js.getLogger()
 
-const request = axios.create({
-  withCredentials: true
-})
-
 const cacheDir = '.cache'
 
-let connector = ''
-
-// the cookie retrieved during auth
-let cookie = ''
-// the final bearer token to access to the mail api
-let bearer = ''
-
-function init(conn) {
-    connector = conn
-}
-
-/*
- * Return the axios request properly configured with interceptors.
- *
+/**
+ * We provide a prototype to have distinct cookies by app!
  */
-function getAxiosRequest() {
-    request.defaults.headers.common['User-Agent'] =  "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:80.0) Gecko/20100101 Firefox/80.0"
-    configureRequestInterceptors();
-    return request;
+function Request(conn) {
+
+    // a dedicated request by app
+    const request = axios.create({
+      withCredentials: true
+    })
+
+    let connector = conn
+
+    // the cookie retrieved during auth
+    let cookie = ''
+    // the final bearer token to access to the mail api
+    let bearer = ''
+
+    /*
+     * Return the axios request properly configured with interceptors.
+     *
+     */
+    this.getAxiosRequest = function() {
+        request.defaults.headers.common['User-Agent'] =  "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:80.0) Gecko/20100101 Firefox/80.0"
+        this.configureRequestInterceptors();
+        return request;
+    }
+
+    // return a promise with cookie if already exists
+    // or will log to app if not existing
+    // the callback shall return a promise to be compatible!
+    this.auth = function(callbackIfNotAuthenticated) {
+
+        // reject never happens
+        if (cookie) {
+            logger.debug(`cookie is ${cookie} for ${connector}`)
+            return new Promise((resolve, reject) => resolve('cookie already provided'))
+        }
+        logger.debug(`there is no cookie we have to fetch it for ${connector}`)
+
+        return callbackIfNotAuthenticated()
+    }
+
+    /**
+     * Gets the cookie from a given response
+     */
+    this.retrieveCookie = function(res)  {
+
+        // no need to fetch a new cookie
+        if (cookie) return cookie;
+
+        if (!res.headers['set-cookie']) throw new Error(`no cookie received for ${connector}`)
+
+        let full = res.headers['set-cookie'][0];
+        // we keep cookie internally
+        cookie = full.substring(0, full.indexOf(';'));
+        return cookie;
+    }
+
+    this.configureRequestInterceptors = function() {
+        // Add a request interceptor to add cookies and bearer token
+        request.interceptors.request.use((config) => {
+            // Do something before request is sent
+            if (cookie != '') {
+                logger.debug(`adding existing cookie for ${connector}`)
+                config['headers']['Cookie'] = cookie
+            }
+            if (bearer != '') {
+                config['headers']['Authorization'] = 'Bearer ' + bearer
+            }
+            return config
+            }, (error) => {
+            return Promise.reject(error)
+        })
+    }
+
+    /**
+     * Sets the bearer token that will be used for each request
+     */
+    this.setBearerToken = function(bearerToken) {
+        bearer = bearerToken
+    }
+
+    this.getCookie = function() {
+        return cookie
+    }
+
+    /**
+     * An utility to debug request response error
+     */
+    this.debugRequest = function(error) {
+        logger.error("Error on request")
+        if (error.request) {
+            logger.error(`Here are the sent headers of the request for ${connector}: ${error.request._header}`)
+        }
+        else {
+            logger.error(error)
+        }
+    }
 }
 
-// return a promise with cookie if already exists
-// or will log to app if not existing
-// the callback shall return a promise to be compatible!
-function auth(callbackIfNotAuthenticated) {
-
-    // reject never happens
-    if (cookie) {
-        logger.debug(`cookie is ${cookie} for ${connector}`)
-        return new Promise((resolve, reject) => resolve('cookie already provided'))
-    }
-    logger.debug(`there is no cookie we have to fetch it ${cookie} for ${connector}`)
-
-    return callbackIfNotAuthenticated()
+function sendNotification(author, message, url) {
+   console.log(`Message from "${author}" => ${message}`)
+   notifier.notify({
+            title: author,
+            message: message,
+            timeout: 30,
+            open: url,
+            wait: true,
+    })
 }
 
 /**
@@ -73,83 +143,13 @@ function updateCache(cacheFile, content, done) {
             }
         });
     });
+
 }
 
-/**
- * Gets the cookie from a given response
- */
-function retrieveCookie(res)  {
 
-    // no need to fetch a new cookie
-    if (cookie) return cookie;
+// export the prototype
+module.exports.Request = Request
 
-    if (!res.headers['set-cookie']) throw new Error(`no cookie received for ${connector}`)
-
-    let full = res.headers['set-cookie'][0];
-    // we keep cookie internally
-    cookie = full.substring(0, full.indexOf(';'));
-    return cookie;
-}
-
-function configureRequestInterceptors() {
-    // Add a request interceptor to add cookies and bearer token
-    request.interceptors.request.use((config) => {
-        // Do something before request is sent
-        if (cookie != '') {
-            logger.debug(`adding fresh cookie for ${connector}`)
-            config['headers']['Cookie'] = cookie
-        }
-        if (bearer != '') {
-            config['headers']['Authorization'] = 'Bearer ' + bearer
-        }
-        return config
-        }, (error) => {
-        return Promise.reject(error)
-    })
-}
-
-/**
- * An utility to debug request response error
- */
-function debugRequest(error) {
-    logger.error("Error on request")
-    if (error.request) {
-        logger.error(`Here are the sent headers of the request: ${error.request._header}`)
-    }
-    else {
-        logger.error(error)
-    }
-}
-
-/**
- * Sets the bearer token that will be used for each request
- */
-function setBearerToken(bearerToken) {
-    bearer = bearerToken
-}
-
-function getCookie() {
-    return cookie
-}
-
-function sendNotification(author, message, url) {
-   console.log(`Message from "${author}" => ${message}`)
-   notifier.notify({
-            title: author,
-            message: message,
-            timeout: 30,
-            open: url,
-            wait: true,
-    })
-}
-
-exports.instanceinit = init
-exports.updateCache = updateCache
-exports.retrieveCookie = retrieveCookie
-exports.getAxiosRequest = getAxiosRequest
-exports.debugRequest = debugRequest
-exports.sendNotification = sendNotification
-exports.setBearerToken = setBearerToken
-exports.auth = auth
-
-console.log(exports)
+// some function utilities
+module.exports.sendNotification = sendNotification
+module.exports.updateCache = updateCache
