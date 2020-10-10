@@ -7,7 +7,6 @@ const commonsRequest = new commons.Request("twake")
 
 // some shortcuts
 const request = commonsRequest.getAxiosRequest()
-const updateCache = commons.updateCache
 const sendNotification = commons.sendNotification
 
 const initUrl =  "https://api.twake.app/ajax/users/login"
@@ -47,20 +46,29 @@ function fetch() {
     })
     .then (res => {
         let messages = res.data.data.results
+            .slice(0, 5)
             // by desc date
             .sort((m1, m2) => -m1.message.creation_date.toString().localeCompare(m2.message.creation_date.toString()))
             // we keep only message
-            .map(message => message.message.content.original_str);
+            .reduce( (acc, message) => {
+
+                var location = message.workspace ? message.workspace.name + '/' : '';
+                location += message.channel ? message.channel.name : ''
+                return acc.concat({
+                    author: `${message.message.sender} ${location}`,
+                    message: message.message.content.original_str
+                })
+            }
+            , [])
+
 
         // we check if already in cache
-        updateCache('twake.cache', JSON.stringify(messages), () => {
+        commonsRequest.updateCache(JSON.stringify(messages), () => {
             // not already in cache we notify
             messages.forEach(message => {
-               sendNotification('twake', message, 'test.com')
+               sendNotification(message.author, message.message, 'test.com')
             })
         });
-
-
     })
     .catch (error => {
         commonsRequest.debugRequest(error)
@@ -68,4 +76,4 @@ function fetch() {
 }
 
 module.exports.fetch = fetch
-
+module.exports.commonsRequest = commonsRequest

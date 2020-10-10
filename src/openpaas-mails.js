@@ -6,7 +6,6 @@ const commonsRequest = new commons.Request("openpaas")
 
 // some shortcuts
 const request = commonsRequest.getAxiosRequest()
-const updateCache = commons.updateCache
 const sendNotification = commons.sendNotification
 
 const initUrl =  "https://openpaas.linagora.com/api/login"
@@ -118,10 +117,13 @@ function fetch() {
             // we sort to avoid bad cache (same content in other order)
             .sort( (m1, m2) => m1.id.localeCompare(m2.id))
 
-        let messageBodies = messages.map((message) => message.preview)
+        let messageBodies = messages.reduce((acc, message) => acc.concat( {
+            author: message.from.name,
+            message: message.preview
+        }), [])
 
         // we check if already in cache
-        updateCache('openpaas-mails.cache', JSON.stringify(messageBodies), () => {
+        commonsRequest.updateCache(JSON.stringify(messageBodies), () => {
             // not already in cache we notify
             messages.forEach(message => {
                sendNotification(message.from.name, message.preview, 'test.com')
@@ -133,7 +135,8 @@ function fetch() {
     })
 }
 
-module.exports.fetch = fetch;
+module.exports.fetch = fetch
+module.exports.commonsRequest = commonsRequest
 
 
 
