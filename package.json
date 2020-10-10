@@ -10,8 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "axios": "0.20.0",
-    "log4js": "^6.3.0",
+    "log4js": "6.3.0",
     "node-notifier": "8.0.0",
-    "promise": "^8.1.0"
+    "promise": "8.1.0"
   }
 }
