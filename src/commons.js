@@ -100,13 +100,17 @@ function Request(conn) {
     /**
      * An utility to debug request response error
      */
-    this.debugRequest = function(error) {
+    this.debugRequest = function(error, resetAuth) {
         logger.error("Error on request")
         if (error.request) {
             logger.error(`Here are the sent headers of the request for ${connector}: ${error.request._header}`)
         }
         else {
             logger.error(error)
+        }
+        if (resetAuth) {
+            cookie = ''
+            bearerToken = ''
         }
     }
 
@@ -116,15 +120,27 @@ function Request(conn) {
 
     /**
      * Updates the cache if not same as already stored.
+     * The messages shall be already sorted in descending order
+     * A message is compounded of id, author and message
      * @param cacheFile the file used to cache the content
-     * @param content the content to put into cache (only if different from previous one)
+     * @param messages the content to put into cache (only if different from previous one)
      * @param done callback to call if there is no error
      */
-    this.updateCache = function(content, done) {
+    this.updateCache = function(messages) {
 
-        this.getCacheContent( (err, oldContent)  => {
-            if (oldContent != content) {
-                fs.writeFile(getPath(), content, () => done() )
+        let messagesToAdd = []
+        this.getCacheContent( (err, oldMessages)  => {
+            let oldMessages2 = oldMessages ? JSON.parse(oldMessages) : []
+            messages.forEach( m1 => {
+                // message id is not in cache
+                if (oldMessages2.filter(m2 => m2.id === m1.id).length === 0) {
+                    messagesToAdd.push(m1)
+                    // we notify
+                    sendNotification(`${connector} - ${m1.author}`, m1.message)
+                }
+            })
+            if (messagesToAdd.length) {
+                fs.writeFile(getPath(), JSON.stringify(messagesToAdd.concat(oldMessages2)), err => console.log(err))
             }
             else {
                 logger.info(`No new update for ${connector}`)
@@ -134,7 +150,12 @@ function Request(conn) {
 
     this.getCacheContent = function(callback) {
         fs.mkdir(cacheDir, () => {
-            fs.readFile(getPath(), 'utf8', (err, content) =>  callback(err, content))
+            fs.readFile(getPath(), 'utf8', (err, content) =>  {
+               if (err || !content) {
+                  content = '[]'
+               }
+               callback(err, content)
+            })
         })
     }
 }

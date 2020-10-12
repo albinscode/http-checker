@@ -10,10 +10,6 @@ logger.level = config.level
 
 logger.info('Launching http checker')
 
-
-
-// commons.sendNotification('test', '<b>test albo</b> <a href="test.com">atessdfsdf</a>')
-
 const fetchAll = () => {
     mails.fetch()
     twake.fetch()

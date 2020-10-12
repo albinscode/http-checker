@@ -115,23 +115,19 @@ function fetch() {
             // we keep only unread messages
             .filter(message => message.isUnread)
             // we sort to avoid bad cache (same content in other order)
-            .sort( (m1, m2) => m1.id.localeCompare(m2.id))
+            .sort( (m1, m2) => -m1.id.localeCompare(m2.id))
 
         let messageBodies = messages.reduce((acc, message) => acc.concat( {
+            id: message.id,
             author: message.from.name,
             message: message.preview
         }), [])
 
         // we check if already in cache
-        commonsRequest.updateCache(JSON.stringify(messageBodies), () => {
-            // not already in cache we notify
-            messages.forEach(message => {
-               sendNotification(message.from.name, message.preview, '')
-            })
-        });
+        commonsRequest.updateCache(messageBodies)
     })
     .catch (error => {
-        commonsRequest(error)
+        commonsRequest(error, true)
     })
 }
 

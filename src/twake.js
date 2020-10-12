@@ -93,6 +93,7 @@ function manageNotifications(res) {
         // we keep only message
         .reduce( (acc, message) =>
             acc.concat({
+                id: message.id,
                 author: message.title,
                 message: message.text
             })
@@ -111,15 +112,10 @@ function fetch() {
         let messages = manageNotifications(res)
 
         // we check if already in cache
-        commonsRequest.updateCache(JSON.stringify(messages), () => {
-            // not already in cache we notify
-            messages.forEach(message => {
-               sendNotification(message.author, message.message, '')
-            })
-        });
+        commonsRequest.updateCache(messages)
     })
     .catch (error => {
-        commonsRequest.debugRequest(error)
+        commonsRequest.debugRequest(error, true)
     })
 }
 
