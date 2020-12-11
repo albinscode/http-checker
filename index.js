@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const mails = require('./src/openpaas-mails.js')
 const twake = require('./src/twake.js')
 const commons = require('./src/commons.js')
